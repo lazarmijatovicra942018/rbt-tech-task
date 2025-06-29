@@ -1,1 +1,1 @@
-from .property_service import PropertyService
+from .building_service import BuildingService
