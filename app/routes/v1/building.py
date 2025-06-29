@@ -1,8 +1,8 @@
-from flask import Blueprint
+from flask import Blueprint, jsonify
 from app.database import get_db
-from app.schemas import BuildingOut
+from app.schemas import BuildingOut, BuildingSearchQuery
 from app.services import BuildingService
-from flask_pydantic import validate
+from flask_pydantic import validate, ValidationError
 
 # Blueprint for building-related routes
 building_bp = Blueprint("buildings", __name__, url_prefix="/buildings")
@@ -25,3 +25,18 @@ def get_building(building_id) -> BuildingOut:
     db = get_db()
     building_out = BuildingService.get_by_id(db=db, building_id=building_id)
     return building_out
+
+
+@building_bp.route("/search", methods=["GET"])
+@validate(
+    query=BuildingSearchQuery,
+    response_many=True
+)
+def search_buildings(query: BuildingSearchQuery) -> list[BuildingOut]:
+    """
+    Search for buildings by any combination of:
+    - min_sqft, max_sqft, parking, state, building_type.
+    If no query params given, returns all buildings.
+    """
+    db = get_db()
+    return BuildingService.search(db=db, filters=query)

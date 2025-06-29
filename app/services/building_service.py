@@ -1,7 +1,8 @@
-from app.models import Building
+from app.models import Building, EstateType, State, City, CityPart
 from sqlalchemy.orm import Session
-from app.schemas import BuildingOut
-from flask import abort
+from sqlalchemy import select, and_
+from app.schemas import BuildingOut, BuildingSearchQuery
+from flask import abort, jsonify
 
 
 class BuildingService:
@@ -32,3 +33,39 @@ class BuildingService:
             abort(404, description=f"Building with ID {building_id} not found")
         building_out = BuildingOut.model_validate(building_orm)
         return building_out
+
+    @classmethod
+    def search(cls, db: Session, filters: BuildingSearchQuery) -> list[BuildingOut]:
+        
+        stmt = select(Building)
+        conditions = []
+        
+        if filters.estate_type is not None:
+            stmt = stmt.join(Building.estate_type)
+            conditions.append(EstateType.name == filters.estate_type)
+            
+        if filters.state is not None:
+            stmt = (
+                stmt
+                .join(Building.city_part)
+                .join(CityPart.city)
+                .join(City.state)
+            )
+            conditions.append(State.name == filters.state)
+        
+        if filters.min_sqft is not None:
+            conditions.append(Building.square_footage >= filters.min_sqft)
+        
+        if filters.max_sqft is not None:
+            conditions.append(Building.square_footage <= filters.max_sqft)
+        
+        if filters.parking is not None:
+            conditions.append(Building.parking == filters.parking)
+        
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
+
+        stmt = stmt.limit(10)
+
+        results = db.scalars(stmt).all()
+        return [BuildingOut.model_validate(building_orm) for building_orm in results]
