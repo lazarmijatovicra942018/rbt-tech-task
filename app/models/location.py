@@ -1,6 +1,6 @@
 from sqlalchemy import String, Integer, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from src.database import Base
+from app.database import Base
 
 class State(Base):
     __tablename__ = 'state'

@@ -1,4 +1,4 @@
-from src.database import Base
+from app.database import Base
 from sqlalchemy import Float, Integer, Boolean, ForeignKey, String
 from sqlalchemy.orm import  Mapped, mapped_column, relationship
 
@@ -48,3 +48,7 @@ class BuildingFloor(Base):
     building_id: Mapped[int] = mapped_column(Integer, ForeignKey("building.id", ondelete="CASCADE"), primary_key=True)
     floor_level: Mapped[str] = mapped_column(String)
     floor_total: Mapped[int] = mapped_column(Integer)
+
+    building: Mapped["Building"] = relationship(
+        back_populates="floor"
+    )
