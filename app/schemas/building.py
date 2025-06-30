@@ -1,6 +1,6 @@
 from flask import abort, jsonify
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-from typing import Optional, List, Mapping, Any
+from pydantic import BaseModel, ConfigDict, Field, model_validator, Extra
+from typing import Optional, List
 from .taxonomy import EstateTypeOut, OfferOut, AmenityOut, HeatingOut
 from .location import CityPartOut
 
@@ -12,14 +12,14 @@ class BuildingFloorOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class BuildingBase(BaseModel):
-    square_footage: Optional[float] = None
-    construction_year: Optional[int] = None
-    land_area: Optional[float] = None
+    square_footage: Optional[float] = Field(None, ge=0)
+    construction_year: Optional[int] = Field(None, ge=0)
+    land_area: Optional[float] = Field(None, ge=0)
     registration: Optional[bool] = None
-    rooms: Optional[float] = None
-    bathrooms: Optional[int] = None
+    rooms: Optional[float] = Field(None, ge=0)
+    bathrooms: Optional[int] = Field(None, ge=0)
     parking: Optional[bool] = None
-    price: Optional[int] = None
+    price: Optional[int] = Field(None, ge=0)
 
 class BuildingIn(BuildingBase):
     estate_type_id: Optional[int] = None
@@ -28,6 +28,10 @@ class BuildingIn(BuildingBase):
 
     amenity_ids: Optional[list[int]] = []
     heating_ids: Optional[list[int]] = []
+
+    class Config:
+        extra = Extra.forbid
+        validate_all = True
 
 class BuildingOut(BuildingBase):
     id: int

@@ -73,3 +73,27 @@ def create_building(body: BuildingIn) -> BuildingOut:
     new_building_out = BuildingService.create(db=db, building_in=body)
     return  new_building_out
 
+
+@building_bp.route("/<int:building_id>", methods=["PUT"])
+@validate(body=BuildingIn)
+def update_building(building_id: int, body: BuildingIn) -> BuildingOut:
+    """
+    Update an existing building record.
+
+    Args:
+        building_id (int): The ID of the building to update.
+        body (BuildingIn): Pydantic schema containing the fields to update,
+            including optional lists of existing amenity and heating IDs.
+
+    Returns:
+        BuildingOut: The updated building, with nested relations,
+            serialized to JSON by flask-pydantic.
+
+    Raises:
+        404: If the building with `building_id` does not exist, or if any
+            provided amenity or heating ID does not exist.
+        400: On database integrity errors (e.g., foreign‑key or unique‑constraint failures).
+    """
+    db = get_db()
+    updated_building_out = BuildingService.update(db=db, building_id=building_id, building_in=body)
+    return updated_building_out

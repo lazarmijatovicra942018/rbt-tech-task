@@ -1,11 +1,10 @@
 from app.models import Building, EstateType, State, City, CityPart, Amenity, Heating
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select, and_, func
-from app.schemas import BuildingOut, BuildingSearchQuery, PaginatedBuildings
+from sqlalchemy import select, and_, func, update
+from app.schemas import BuildingOut, BuildingSearchQuery, PaginatedBuildings, BuildingIn
 from flask import abort, jsonify, make_response
 
-from app.schemas.building import BuildingIn
 
 
 class BuildingService:
@@ -117,7 +116,7 @@ class BuildingService:
         Create a new Building and associate existing amenities/heatings.
 
         Args:
-            payload (BuildingCreate): Building data with optional amenity/heating IDs.
+            building_in (BuildingIn): Building data with optional amenity/heating IDs.
             db (Session): Active SQLAlchemy session.
 
         Returns:
@@ -138,6 +137,7 @@ class BuildingService:
             requested_ids = set(building_in.amenity_ids)
             missing = requested_ids - found_amenity_ids
             if missing:
+                db.rollback()
                 payload = {
                     "error": "Amenity ID(s) not found",
                     "missing_ids": sorted(missing)
@@ -152,6 +152,7 @@ class BuildingService:
             requested_ids = set(building_in.heating_ids)
             missing = requested_ids - found_heating_ids
             if missing:
+                db.rollback()
                 payload = {
                     "error": "Heating ID(s) not found",
                     "missing_ids": sorted(missing)
@@ -174,4 +175,87 @@ class BuildingService:
                 "hint": "Check foreign keys or unique constraints",
             }
 
+            abort(make_response(jsonify(payload), 400))
+
+    @classmethod
+    def update(cls, db: Session, building_id: int, building_in: BuildingIn) -> BuildingOut:
+        """
+        Update an existing Building’s data and its related amenities/heatings.
+
+        Args:
+            db (Session): Active SQLAlchemy session.
+            building_id (int): ID of the building to update.
+            building_in (BuildingIn): Partial or full building data, may include
+                `amenity_ids` and/or `heating_ids` to redefine those relationships.
+
+        Returns:
+            BuildingOut: The updated building, validated and serialized with its
+                current relations.
+
+        Raises:
+            404:
+                - If no Building with the given `building_id` exists.
+                - If any of the provided `amenity_ids` or `heating_ids` cannot be found.
+            400: On database integrity errors (e.g. unique constraint or foreign key violations).
+        """
+        building_orm = db.get(Building, building_id)
+        if building_orm is None:
+            payload = {
+                "error": "Building not found",
+                "id": building_id,
+                "message": f"Building with ID {building_id} not found"
+            }
+            abort(make_response(jsonify(payload), 404))
+
+        update_data = building_in.model_dump(exclude_unset=True)
+
+        amenity_ids = update_data.pop("amenity_ids", None)
+        heating_ids = update_data.pop("heating_ids", None)
+
+        for field, value in update_data.items():
+            setattr(building_orm, field, value)
+
+        if amenity_ids:
+            stmt = select(Amenity).where(Amenity.id.in_(amenity_ids))
+            building_orm.amenities = db.scalars(stmt).all()
+
+            found_amenity_ids = {amenity.id for amenity in building_orm.amenities}
+            requested_ids = set(amenity_ids)
+            missing = requested_ids - found_amenity_ids
+            if missing:
+                db.rollback()
+                payload = {
+                    "error": "Amenity ID(s) not found",
+                    "missing_ids": sorted(missing)
+                }
+
+                abort(make_response(jsonify(payload), 404))
+
+        if heating_ids:
+            stmt = select(Heating).where(Heating.id.in_(heating_ids))
+            building_orm.heatings = db.scalars(stmt).all()
+            found_heating_ids = {heating.id for heating in building_orm.heatings}
+            requested_ids = set(heating_ids)
+            missing = requested_ids - found_heating_ids
+            if missing:
+                db.rollback()
+                payload = {
+                    "error": "Heating ID(s) not found",
+                    "missing_ids": sorted(missing)
+                }
+
+                abort(make_response(jsonify(payload), 404))
+
+        try:
+            db.commit()
+            db.refresh(building_orm)
+            return BuildingOut.model_validate(building_orm)
+
+        except IntegrityError as e:
+            db.rollback()
+            payload = {
+                "error": "Database integrity error",
+                "details": str(e.__cause__ or e),
+                "hint": "Check foreign keys or unique constraints",
+            }
             abort(make_response(jsonify(payload), 400))
