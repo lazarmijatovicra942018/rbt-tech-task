@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify
 from app.database import get_db
 from app.schemas import BuildingOut, BuildingSearchQuery, PaginatedBuildings
+from app.schemas.building import BuildingIn
 from app.services import BuildingService
 from flask_pydantic import validate, ValidationError
 
@@ -49,3 +50,26 @@ def search_buildings(query: BuildingSearchQuery) -> PaginatedBuildings:
 
     db = get_db()
     return BuildingService.search(db=db, filters=query)
+
+@building_bp.route("", methods=["POST"])
+@validate(body=BuildingIn)
+def create_building(body: BuildingIn) -> BuildingOut:
+    """
+    Create a new building record.
+
+    Args:
+        body (BuildingIn): Pydantic schema containing building data
+            and lists of existing amenity and heating IDs.
+
+    Returns:
+        BuildingOut: The created building, with nested relations,
+            serialized to JSON by flask-pydantic.
+
+    Raises:
+        404: If any provided amenity or heating ID does not exist.
+        400: On database integrity errors (e.g., FK or unique-constraint failures).
+    """
+    db = get_db()
+    new_building_out = BuildingService.create(db=db, building_in=body)
+    return  new_building_out
+

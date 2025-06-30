@@ -11,18 +11,26 @@ class BuildingFloorOut(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class BuildingBase(BaseModel):
+    square_footage: Optional[float] = None
+    construction_year: Optional[int] = None
+    land_area: Optional[float] = None
+    registration: Optional[bool] = None
+    rooms: Optional[float] = None
+    bathrooms: Optional[int] = None
+    parking: Optional[bool] = None
+    price: Optional[int] = None
 
+class BuildingIn(BuildingBase):
+    estate_type_id: Optional[int] = None
+    offer_id: Optional[int] = None
+    city_part_id: Optional[int] = None
 
-class BuildingOut(BaseModel):
+    amenity_ids: Optional[list[int]] = []
+    heating_ids: Optional[list[int]] = []
+
+class BuildingOut(BuildingBase):
     id: int
-    square_footage: Optional[float]
-    construction_year: Optional[int]
-    land_area: Optional[float]
-    registration: Optional[bool]
-    rooms: Optional[float]
-    bathrooms: Optional[int]
-    parking: Optional[bool]
-    price: Optional[int]
 
     estate_type: EstateTypeOut
     offer: OfferOut
