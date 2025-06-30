@@ -1,7 +1,7 @@
 from app.models import Building, EstateType, State, City, CityPart
 from sqlalchemy.orm import Session
-from sqlalchemy import select, and_
-from app.schemas import BuildingOut, BuildingSearchQuery
+from sqlalchemy import select, and_, func
+from app.schemas import BuildingOut, BuildingSearchQuery, PaginatedBuildings
 from flask import abort, jsonify
 
 
@@ -35,8 +35,22 @@ class BuildingService:
         return building_out
 
     @classmethod
-    def search(cls, db: Session, filters: BuildingSearchQuery) -> list[BuildingOut]:
-        
+    def search(cls, db: Session, filters: BuildingSearchQuery) -> PaginatedBuildings:
+        """
+        Search buildings with optional filters and return paginated results.
+
+        Args:
+            db (Session): SQLAlchemy database session.
+            filters (BuildingSearchQuery): Filtering and pagination parameters.
+
+        Returns:
+            PaginatedBuildings: Pydantic model containing:
+                - buildings: List of BuildingOut items for the requested page.
+                - total: Total number of matching buildings.
+                - page: Current page number (clamped to valid range).
+                - size: Number of items per page.
+                - pages: Total number of available pages.
+        """
         stmt = select(Building)
         conditions = []
         
@@ -65,7 +79,26 @@ class BuildingService:
         if conditions:
             stmt = stmt.where(and_(*conditions))
 
-        stmt = stmt.limit(10)
+        #Pagination
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total = db.scalar(count_stmt) or 0
 
-        results = db.scalars(stmt).all()
-        return [BuildingOut.model_validate(building_orm) for building_orm in results]
+        size = filters.size
+        pages = max((total + size - 1) // size, 1)
+
+        page = min(max(filters.page, 1), pages)
+        offset = (page - 1) * size
+
+        paged_stmt = stmt.order_by(Building.id).limit(size).offset(offset)
+
+        results = db.scalars(paged_stmt).all()
+        buildings_out = [BuildingOut.model_validate(building_orm) for building_orm in results]
+
+
+        return PaginatedBuildings(
+            buildings=buildings_out,
+            total=total,
+            page=page,
+            size=size,
+            pages=pages
+        )

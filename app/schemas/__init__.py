@@ -1,1 +1,1 @@
-from .building import BuildingOut, BuildingSearchQuery
+from .building import BuildingOut, BuildingSearchQuery, PaginatedBuildings

@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
 from app.database import get_db
-from app.schemas import BuildingOut, BuildingSearchQuery
+from app.schemas import BuildingOut, BuildingSearchQuery, PaginatedBuildings
 from app.services import BuildingService
 from flask_pydantic import validate, ValidationError
 
@@ -29,14 +29,23 @@ def get_building(building_id) -> BuildingOut:
 
 @building_bp.route("/search", methods=["GET"])
 @validate(
-    query=BuildingSearchQuery,
-    response_many=True
+    query=BuildingSearchQuery
 )
-def search_buildings(query: BuildingSearchQuery) -> list[BuildingOut]:
+def search_buildings(query: BuildingSearchQuery) -> PaginatedBuildings:
     """
-    Search for buildings by any combination of:
-    - min_sqft, max_sqft, parking, state, building_type.
-    If no query params given, returns all buildings.
+    Search for buildings using query parameters such as square footage, parking,
+    state, and estate type.
+
+    Args:
+        query (BuildingSearchQuery): The validated query parameters from the URL.
+
+    Returns:
+        PaginatedBuildings: A paginated list of buildings matching the filters,
+                            including total results, current page, and total pages.
+
+    Raises:
+        422: If query parameters are invalid (e.g. min_sqft > max_sqft).
     """
+
     db = get_db()
     return BuildingService.search(db=db, filters=query)
