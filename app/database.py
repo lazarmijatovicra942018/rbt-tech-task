@@ -1,32 +1,39 @@
-import os
+from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from flask import g
 
-POSTGRES_USER = os.environ.get('POSTGRES_USER')
-POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD')
-POSTGRES_DB = os.environ.get('POSTGRES_DB')
-POSTGRES_HOST = os.environ.get('POSTGRES_HOST')
+# Global holders for engine and session factory
+engine = None
+SessionLocal = None
 
-SQLALCHEMY_DATABASE_URL = \
-    f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}/{POSTGRES_DB}"
-
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    pool_size=int(os.environ.get('DB_POOL_SIZE', 5)),
-    max_overflow=int(os.environ.get('DB_MAX_OVERFLOW', 10)),
-    pool_pre_ping=True,
-    echo=os.environ.get('ENV') == 'development'
-)
-
-# SessionLocal is a factory for new SQLAlchemy sessions
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-# Base class for declarative SQLAlchemy models
 class Base(DeclarativeBase):
     pass
+
+
+def init_db(app):
+    """
+    Initialize SQLAlchemy engine and session factory using Flask app config.
+    Registers teardown function to close session after each request.
+    """
+    global engine, SessionLocal
+
+    database_uri = app.config["SQLALCHEMY_DATABASE_URI"]
+    pool_size = int(app.config.get("DB_POOL_SIZE", 5))
+    max_overflow = int(app.config.get("DB_MAX_OVERFLOW", 10))
+    echo = app.config.get("ENV") == "development"
+
+    engine = create_engine(
+        database_uri,
+        pool_size=pool_size,
+        max_overflow=max_overflow,
+        pool_pre_ping=True,
+        echo=echo,
+    )
+
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    app.teardown_appcontext(close_db)
 
 
 def get_db():
@@ -35,7 +42,7 @@ def get_db():
     Creates a new SessionLocal() only if one doesn't already exist in g.
 
     Returns:
-        SessionLocal instance stored in g.db
+        SQLAlchemy Session object
     """
     if "db" not in g:
         g.db = SessionLocal()
@@ -45,28 +52,27 @@ def get_db():
 def close_db(e=None):
     """
     Close and remove the database session at the end of the request.
-    This is registered with Flask's teardown_appcontext hook.
 
     Args:
-        exception (Optional[Exception]): the exception that triggered teardown, if any
+        e (Optional[Exception]): Exception, if raised during the request.
     """
-
     db = g.pop("db", None)
-
     if db is not None:
         db.close()
 
 
-
-def init_db(app):
+@contextmanager
+def transactional_session():
     """
-    Initialize database session management for a Flask app.
-    Registers teardown_appcontext to ensure sessions are closed.
-
-    This should be called inside your create_app() factory.
+    Provide a transactional scope around a series of operations.
+    Commits on success, rolls back on failure.
     """
-
-    #TODO
-    #finish this
-
-    app.teardown_appcontext(close_db)
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

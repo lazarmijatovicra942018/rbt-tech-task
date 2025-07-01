@@ -259,3 +259,11 @@ class BuildingService:
                 "hint": "Check foreign keys or unique constraints",
             }
             abort(make_response(jsonify(payload), 400))
+
+    @classmethod
+    def bulk_create(cls, db: Session, buildings_orm: list[Building]):
+        """
+        Add a batch of Building ORM objects to the given session and flush them.
+        """
+        db.add_all(buildings_orm)
+        db.flush()
