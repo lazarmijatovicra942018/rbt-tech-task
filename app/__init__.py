@@ -1,11 +1,14 @@
 from flask import Flask
 from flask_apscheduler import APScheduler
+from flask_jwt_extended import JWTManager
+
 from app.routes import v1_bp
 from app.database import get_db
 from app.services import CSVService
 from .config import Config
 
 scheduler = APScheduler()
+jwt = JWTManager()
 
 def create_app(config_object=Config):
     """
@@ -28,5 +31,8 @@ def create_app(config_object=Config):
 
     scheduler.init_app(app)
     scheduler.start()
+
+    jwt.init_app(app)
+
 
     return app

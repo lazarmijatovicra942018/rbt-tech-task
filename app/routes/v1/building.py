@@ -1,4 +1,6 @@
 from flask import Blueprint, jsonify
+from flask_jwt_extended import jwt_required
+
 from app.database import get_db
 from app.schemas import BuildingOut, BuildingSearchQuery, PaginatedBuildings
 from app.schemas.building import BuildingIn
@@ -52,6 +54,7 @@ def search_buildings(query: BuildingSearchQuery) -> PaginatedBuildings:
     return BuildingService.search(db=db, filters=query)
 
 @building_bp.route("", methods=["POST"])
+@jwt_required()
 @validate(body=BuildingIn)
 def create_building(body: BuildingIn) -> BuildingOut:
     """
@@ -75,6 +78,7 @@ def create_building(body: BuildingIn) -> BuildingOut:
 
 
 @building_bp.route("/<int:building_id>", methods=["PUT"])
+@jwt_required()
 @validate(body=BuildingIn)
 def update_building(building_id: int, body: BuildingIn) -> BuildingOut:
     """

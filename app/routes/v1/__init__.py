@@ -5,3 +5,6 @@ v1_bp = Blueprint("v1", __name__)
 
 from .building import building_bp
 v1_bp.register_blueprint(building_bp, url_prefix="/buildings")
+
+from .auth import auth_bp
+v1_bp.register_blueprint(auth_bp, url_prefix="/auth")

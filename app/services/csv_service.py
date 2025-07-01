@@ -113,7 +113,7 @@ class CSVService:
             with transactional_session() as db:
                 BuildingService.bulk_create(db=db, buildings_orm=buildings)
 
-            cls.logger.info(f" → Success importing {path.name}")
+            cls.logger.info(f" → Success processing {path.name}")
             return cls.PROCESSED_DIR / path.name
 
         except Exception as e:

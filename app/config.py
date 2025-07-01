@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 
 class Config:
@@ -47,3 +48,11 @@ class Config:
     NEURO_PER_USD = float(os.getenv("NEURO_PER_USD", 0.90))
     SQM_PER_ACRE  = float(os.getenv("SQM_PER_ACRE", 4047.0))
     SQM_PER_SQFT  = float(os.getenv("SQM_PER_SQFT", 0.092903))
+
+    # --- JSON Web Token (JWT) configuration ---
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-jwt-secret-key")
+    JWT_ALGORITHM = "HS512"
+    JWT_TOKEN_LOCATION = ["headers"]
+    JWT_HEADER_NAME = "Authorization"
+    JWT_HEADER_TYPE = "Bearer"
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
