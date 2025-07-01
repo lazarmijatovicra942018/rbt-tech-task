@@ -1,0 +1,38 @@
+# Byte‑compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtualenvs / env-folders
+env/
+venv/
+.venv/
+
+# Git metadata
+.git
+.gitignore
+
+# Docker‑ignore itself
+.dockerignore
+
+# Local env files (you load them at runtime, not copy into image)
+.env
+.env.local
+.env.*.local
+
+# IDE/editor folders
+.vscode/
+.idea/
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Node modules (if you happen to have front‑end code)
+node_modules/
+
+# Database dumps or init scripts (you mount these at runtime)
+db-init/
+
+# Folder containg the csv files
+data
