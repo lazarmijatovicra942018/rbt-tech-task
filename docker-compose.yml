@@ -1,0 +1,33 @@
+services:
+  api:
+    build: .
+    command: flask run --host=0.0.0.0
+    restart: unless-stopped
+    volumes:
+      - .:/app
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ./db-init/real_estate_db.sql:/docker-entrypoint-initdb.d/real_estate_db.sql
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - 9999:5432
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+volumes:
+  postgres_data:

@@ -20,7 +20,7 @@ class Config:
             'id': 'import_job',
             'func': 'app.services.csv_service:CSVService.import_all',
             'trigger': 'interval',
-            'hours': 1,
+            'minutes': 1,
         },
     ]
 
@@ -34,7 +34,7 @@ class Config:
         raise RuntimeError("Missing one or more required database environment variables.")
 
     SQLALCHEMY_DATABASE_URI = \
-        f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}/{POSTGRES_DB}"
+        f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:5432/{POSTGRES_DB}"
 
 
     # --- Data directories (all absolute) ---
