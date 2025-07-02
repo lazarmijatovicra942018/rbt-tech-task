@@ -14,6 +14,7 @@ class Config:
     SCHEDULER_JOB_DEFAULTS = {
         'coalesce': False,
         'max_instances': 1,
+        'misfire_grace_time': 30,
     }
     JOBS = [
         {
@@ -40,7 +41,7 @@ class Config:
     # --- Data directories (all absolute) ---
     HERE         = Path(__file__).resolve().parent
     PROJECT_ROOT = HERE.parents[0]
-    DATA_DIR     = Path(os.getenv("DATA_DIR", PROJECT_ROOT / "data"))
+    DATA_DIR     = PROJECT_ROOT / "data"
     PROCESSED_DIR= DATA_DIR / "processed"
     ERRORED_DIR  = DATA_DIR / "errored"
 
